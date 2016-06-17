@@ -385,9 +385,10 @@ class BotoClient(object):
     if (aws_access_key_id is not None) and (aws_secret_access_key is not None):
       self.client = self.boto3.client('s3',
                                       aws_access_key_id=aws_access_key_id,
-                                      aws_secret_access_key=aws_secret_access_key)
+                                      aws_secret_access_key=aws_secret_access_key,
+                                      region_name=opt.aws_region)
     else:
-      self.client = self.boto3.client('s3')
+      self.client = self.boto3.client('s3', region_name=opt.aws_region)
 
     # Cache the result so we don't have to recalculate.
     self.legal_params = {}
@@ -1801,6 +1802,9 @@ if __name__ == '__main__':
   parser.add_option(
       '--iam-assumed-role', help = 'use IAM assumed role for connection to S3. Applicable only in AWS',
        dest='aws_iam_role', action='store_true', default=False)
+  parser.add_option(
+      '--region', help = 'use provided region to access S3', dest = 'aws_region',
+      type = str, default = None)
   parser.add_option(
       '-f', '--force', help='force overwrite files when download or upload',
       dest='force', action='store_true', default=False)
