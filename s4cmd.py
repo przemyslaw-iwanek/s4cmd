@@ -267,6 +267,7 @@ class BotoClient(object):
   # Encapsulate boto3 interface intercept all API calls.
   boto3 = __import__('boto3') # version >= 1.3.1
   botocore = __import__('botocore')
+  boto3session = __import__('boto3.session')
 
   # Exported exceptions.
   BotoError = boto3.exceptions.Boto3Error
@@ -384,9 +385,10 @@ class BotoClient(object):
     if (aws_access_key_id is not None) and (aws_secret_access_key is not None):
       self.client = self.boto3.client('s3',
                                       aws_access_key_id=aws_access_key_id,
-                                      aws_secret_access_key=aws_secret_access_key)
+                                      aws_secret_access_key=aws_secret_access_key,
+                                      region_name=opt.aws_region)
     else:
-      self.client = self.boto3.client('s3')
+      self.client = self.boto3.client('s3', region_name=opt.aws_region)
 
     # Cache the result so we don't have to recalculate.
     self.legal_params = {}
@@ -665,10 +667,18 @@ class S3Handler(object):
       return None
 
   @staticmethod
+  def s3_keys_from_iam_role(opt):
+    '''Retrieve S3 access key settings from IAM role, if present; otherwise return None.'''
+    if opt.aws_iam_role: 
+      return (None, None)
+    else:
+      return None
+
+  @staticmethod
   def init_s3_keys(opt):
     '''Initialize s3 access keys from environment variable or s3cfg config file.'''
     S3Handler.S3_KEYS = S3Handler.s3_keys_from_cmdline(opt) or S3Handler.s3_keys_from_env() \
-                        or S3Handler.s3_keys_from_s3cfg(opt)
+                        or S3Handler.s3_keys_from_s3cfg(opt) or S3Handler.s3_keys_from_iam_role(opt)
 
   def __init__(self, opt):
     '''Constructor, connect to S3 store'''
@@ -1789,6 +1799,12 @@ if __name__ == '__main__':
   parser.add_option(
       '--secret-key', help = 'use security key for connection to S3', dest = 'secret_key',
       type = 'string', default = None)
+  parser.add_option(
+      '--iam-assumed-role', help = 'use IAM assumed role for connection to S3. Applicable only in AWS',
+       dest='aws_iam_role', action='store_true', default=False)
+  parser.add_option(
+      '--region', help = 'use provided region to access S3', dest = 'aws_region',
+      type = str, default = None)
   parser.add_option(
       '-f', '--force', help='force overwrite files when download or upload',
       dest='force', action='store_true', default=False)
